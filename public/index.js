@@ -6,6 +6,7 @@ $(function() {
     let imageDisplay = $('#image-display')
     let loading = $('#loading')
 
+    /* Load Model List */
     $.get('/get/model-list', function(response) {
         $.each(response, function(_, model) {
             let row = "<option value='" + model + "'>" + model + "</option>";
@@ -14,6 +15,7 @@ $(function() {
         });
     });
 
+    /* 상단 Tab Button -> Stable Diffusion으로 이동 */
     $(document).ready(function() {
         tabBtn1.click(function() {
             $.get('/get/url/stable_diffusion', function(response) {
@@ -24,6 +26,7 @@ $(function() {
         });
     });
 
+    /* Image Inference 요청 */
     $(document).ready(function() {
         submit.click(function() {
             let prompt = textInput.val();

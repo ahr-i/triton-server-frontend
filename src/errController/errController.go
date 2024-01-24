@@ -5,6 +5,7 @@ import (
 	"os"
 )
 
+/* Error Handler */
 func ErrorCheck(err error, msg string, filePath string) {
 	if err != nil {
 		log.Println("===== ERROR CATCH =====")

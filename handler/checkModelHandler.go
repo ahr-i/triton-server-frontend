@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
+/* Model 존재 여부 Check */
 func (h *Handler) checkModelHandler(w http.ResponseWriter, r *http.Request) {
 	_, fp, _, _ := runtime.Caller(1)
 

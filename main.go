@@ -11,11 +11,13 @@ import (
 	"github.com/urfave/negroni"
 )
 
+/* Server Setting */
 func Init() {
-	models.Init(setting.ModelPath)
-	urls.Init(setting.UrlPath)
+	models.Init(setting.ModelPath) // Model List Init
+	urls.Init(setting.UrlPath)     // URL List Init
 }
 
+/* Main */
 func main() {
 	Init()
 
@@ -27,5 +29,6 @@ func main() {
 	handler.Use(corsController.SetCors("*", "GET, POST, PUT, DELETE", "*", true))
 	handler.UseHandler(mux)
 
+	// HTTP Server Start
 	http.ListenAndServe(":"+setting.ServerPort, handler)
 }

@@ -20,20 +20,24 @@ import (
 	"github.com/gorilla/mux"
 )
 
+/* Response Struct */
 type TritonResponse struct {
 	Outputs []struct {
 		Data []float32 `json:"data"`
 	} `json:"outputs"`
 }
 
+/* Request Struct */
 type RequestData struct {
 	Prompt string `json:"prompt"`
 	Seed   string `json:"seed"`
 }
 
+/* Inference Handler: Triton Server에 Inference Request 및 Image 전달 */
 func (h *Handler) inferHandler(w http.ResponseWriter, r *http.Request) {
 	_, fp, _, _ := runtime.Caller(1)
 
+	// Request Decode
 	var request RequestData
 	err_ := json.NewDecoder(r.Body).Decode(&request)
 	errController.ErrorCheck(err_, "REQUEST JSON DECODE ERROR", fp)
@@ -42,17 +46,19 @@ func (h *Handler) inferHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	model := vars["name"]
 
-	log.Println(request.Prompt)
+	// log.Println(request.Prompt)
 	if request.Prompt == "" || request.Prompt == " " {
 		rend.JSON(w, http.StatusBadRequest, nil)
 	}
 
+	// Model, Version Check And Setting
 	modelMap := models.GetModelList()
 	version, err := modelMap[model]
 	if !err {
 		rend.JSON(w, http.StatusNotFound, nil)
 	}
 
+	// Triton Inference Request
 	seed, _ := strconv.Atoi(request.Seed)
 	url := "http://" + setting.TritonUrl + "/v2/models/" + model + "/versions/" + version + "/infer"
 	requestData := map[string]interface{}{
@@ -102,11 +108,13 @@ func (h *Handler) inferHandler(w http.ResponseWriter, r *http.Request) {
 	errController.ErrorCheck(err_, "HTTP REQUEST ERROR", fp)
 	req.Header.Set("Content-Type", "application/json")
 
+	// Triton Server Response
 	client := &http.Client{}
 	resp, err_ := client.Do(req)
 	errController.ErrorCheck(err_, "HTTP RESPONSE ERROR", fp)
 	defer resp.Body.Close()
 
+	// Response Decode
 	body, err_ := ioutil.ReadAll(resp.Body)
 	errController.ErrorCheck(err_, "HTTP BODY READ ERROR", fp)
 
@@ -115,14 +123,15 @@ func (h *Handler) inferHandler(w http.ResponseWriter, r *http.Request) {
 		log.Fatalf("RESPONSE JSON PARSE ERROR: %v", err)
 	}
 
+	// Uint8 Array To Image
 	if len(tritonResponse.Outputs) > 0 && len(tritonResponse.Outputs[0].Data) > 0 {
 		imgData := tritonResponse.Outputs[0].Data
 
-		// 이미지의 크기를 가정 (예: 512x512)
+		// Image의 크기 가정
 		width, height := 512, 512
 		img := image.NewRGBA(image.Rect(0, 0, width, height))
 
-		// imgData에서 픽셀 값 추출 및 이미지 생성
+		// ImgData에서 픽셀 값 추출 및 Image 생성
 		for i := 0; i < len(imgData); i += 3 {
 			x := (i / 3) % width
 			y := (i / 3) / width
@@ -132,10 +141,12 @@ func (h *Handler) inferHandler(w http.ResponseWriter, r *http.Request) {
 			img.Set(x, y, color.RGBA{R: r, G: g, B: b, A: 255})
 		}
 
+		// Response에 Image 추가
 		w.Header().Set("Content-Type", "image/png")
 		err_ = png.Encode(w, img)
 		errController.ErrorCheck(err_, "IMAGE ENCODE ERROR", fp)
 
+		// Image Local 저장
 		currentTime := time.Now().Format("20060102-150405.999")
 		fileName := "result-" + currentTime + ".png"
 		file, err := os.Create("./result/" + fileName)
@@ -150,4 +161,7 @@ func (h *Handler) inferHandler(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
+
+	// Inference Fail
+	rend.JSON(w, http.StatusBadRequest, nil)
 }

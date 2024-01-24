@@ -7,6 +7,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
+/* 해당하는 URL의 Address 반환 */
 func (h *Handler) getUrlHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	urlName := vars["name"]

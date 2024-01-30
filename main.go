@@ -3,11 +3,11 @@ package main
 import (
 	"net/http"
 
-	"github.com/ahr-i/triton-server-front-end/handler"
-	"github.com/ahr-i/triton-server-front-end/models"
-	"github.com/ahr-i/triton-server-front-end/setting"
-	"github.com/ahr-i/triton-server-front-end/src/corsController"
-	"github.com/ahr-i/triton-server-front-end/urls"
+	"github.com/ahr-i/triton-server-frontend/handler"
+	"github.com/ahr-i/triton-server-frontend/models"
+	"github.com/ahr-i/triton-server-frontend/setting"
+	"github.com/ahr-i/triton-server-frontend/src/corsController"
+	"github.com/ahr-i/triton-server-frontend/urls"
 	"github.com/urfave/negroni"
 )
 

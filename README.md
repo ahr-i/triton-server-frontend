@@ -5,12 +5,12 @@ Used the Text-to-Image feature of Stable Diffusion.
 ## 1. Docker Start
 ### 1.1 Clone
 ```
-git clone https://github.com/ahr-i/triton-server-front-end.git
+git clone https://github.com/ahr-i/triton-server-frontend.git
 ```
 
 ### 1.2 build
 ```
-cd triton-server-front-end
+cd triton-server-frontend
 docker build -t triton-frontend .
 ```
 

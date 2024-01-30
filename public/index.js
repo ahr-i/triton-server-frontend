@@ -32,8 +32,7 @@ $(function() {
             let prompt = textInput.val();
             let model = dropdown1.val();
             let data = {
-                prompt: prompt,
-                seed: "1"
+                prompt: prompt
             };
 
             if (model == "Select a model...") {
@@ -56,13 +55,14 @@ $(function() {
                 },
                 body: JSON.stringify(data)
             })
-            .then(response => response.blob())
-            .then(blob => {
-                let imageUrl = URL.createObjectURL(blob);
-                let imgTag = $("<img>", { src: imageUrl, alt: "Generated Image" });
+            .then(response => response.json())
+            .then(data => {
+                let base64Image = data.image;
+                let imgTag = $("<img>", { src: "data:image/png;base64," + base64Image, alt: "Generated Image" });
+                
                 imageDisplay.empty().append(imgTag);
 
-                loading.text("Finish")
+                loading.text("Finish");
             })
             .catch(error => {
                 console.error("ERROR" + error);

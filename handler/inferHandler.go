@@ -2,16 +2,17 @@ package handler
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"image"
 	"image/color"
 	"image/png"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"runtime"
-	"strconv"
 	"time"
 
 	"github.com/ahr-i/triton-server-front-end/models"
@@ -27,10 +28,13 @@ type TritonResponse struct {
 	} `json:"outputs"`
 }
 
+type ResponseData struct {
+	Image string `json:"image"`
+}
+
 /* Request Struct */
 type RequestData struct {
 	Prompt string `json:"prompt"`
-	Seed   string `json:"seed"`
 }
 
 /* Inference Handler: Triton Server에 Inference Request 및 Image 전달 */
@@ -59,7 +63,31 @@ func (h *Handler) inferHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Triton Inference Request
-	seed, _ := strconv.Atoi(request.Seed)
+	tritonResponse := requestTritonServerResponse(request, model, version)
+
+	// Uint8 Array To Image
+	img, err := converUint8ToPng(tritonResponse.Outputs[0].Data)
+	if err {
+		// Inference fail
+		rend.JSON(w, http.StatusBadRequest, nil)
+	}
+
+	// Encode the image in base64
+	imgBase64 := encodeImageInBase64(img)
+
+	// Response에 Image 추가
+	rend.JSON(w, http.StatusOK, ResponseData{Image: imgBase64})
+
+	// Image Local 저장
+	saveImageToLocal(img)
+}
+
+/* Send an inference request to the Triton Server and return the request */
+func requestTritonServerResponse(request RequestData, model string, version string) TritonResponse {
+	_, fp, _, _ := runtime.Caller(1)
+
+	// Triton Inference Request
+	seed := rand.Intn(10001)
 	url := "http://" + setting.TritonUrl + "/v2/models/" + model + "/versions/" + version + "/infer"
 	requestData := map[string]interface{}{
 		"inputs": []map[string]interface{}{
@@ -123,45 +151,58 @@ func (h *Handler) inferHandler(w http.ResponseWriter, r *http.Request) {
 		log.Fatalf("RESPONSE JSON PARSE ERROR: %v", err)
 	}
 
-	// Uint8 Array To Image
-	if len(tritonResponse.Outputs) > 0 && len(tritonResponse.Outputs[0].Data) > 0 {
-		imgData := tritonResponse.Outputs[0].Data
+	return tritonResponse
+}
 
-		// Image의 크기 가정
-		width, height := 512, 512
-		img := image.NewRGBA(image.Rect(0, 0, width, height))
-
-		// ImgData에서 픽셀 값 추출 및 Image 생성
-		for i := 0; i < len(imgData); i += 3 {
-			x := (i / 3) % width
-			y := (i / 3) / width
-			r := uint8(imgData[i] * 255)
-			g := uint8(imgData[i+1] * 255)
-			b := uint8(imgData[i+2] * 255)
-			img.Set(x, y, color.RGBA{R: r, G: g, B: b, A: 255})
-		}
-
-		// Response에 Image 추가
-		w.Header().Set("Content-Type", "image/png")
-		err_ = png.Encode(w, img)
-		errController.ErrorCheck(err_, "IMAGE ENCODE ERROR", fp)
-
-		// Image Local 저장
-		currentTime := time.Now().Format("20060102-150405.999")
-		fileName := "result-" + currentTime + ".png"
-		file, err := os.Create("./result/" + fileName)
-		if err != nil {
-			log.Fatalf("이미지 파일 생성 실패: %v", err)
-		}
-		defer file.Close()
-
-		if err := png.Encode(file, img); err != nil {
-			log.Fatalf("이미지 저장 실패: %v", err)
-		}
-
-		return
+func converUint8ToPng(imgData []float32) (*image.RGBA, bool) {
+	if len(imgData) <= 0 {
+		return nil, true
 	}
 
-	// Inference Fail
-	rend.JSON(w, http.StatusBadRequest, nil)
+	// Image의 크기 가정
+	width, height := 512, 512
+	img := image.NewRGBA(image.Rect(0, 0, width, height))
+
+	// ImgData에서 픽셀 값 추출 및 Image 생성
+	for i := 0; i < len(imgData); i += 3 {
+		x := (i / 3) % width
+		y := (i / 3) / width
+		r := uint8(imgData[i] * 255)
+		g := uint8(imgData[i+1] * 255)
+		b := uint8(imgData[i+2] * 255)
+		img.Set(x, y, color.RGBA{R: r, G: g, B: b, A: 255})
+	}
+
+	return img, false
+}
+
+/* Encode the image in base64 */
+func encodeImageInBase64(img *image.RGBA) string {
+	var buffer bytes.Buffer
+
+	if err := png.Encode(&buffer, img); err != nil {
+		log.Println("BASE ENCODE FAIL")
+
+		os.Exit(1)
+	}
+	imgBase64 := base64.StdEncoding.EncodeToString(buffer.Bytes())
+
+	return imgBase64
+}
+
+/* Save image to local */
+func saveImageToLocal(img *image.RGBA) error {
+	currentTime := time.Now().Format("20060102-150405.999")
+	fileName := "result-" + currentTime + ".png"
+	file, err := os.Create("./result/" + fileName)
+	if err != nil {
+		log.Fatalf("이미지 파일 생성 실패: %v", err)
+	}
+	defer file.Close()
+
+	if err := png.Encode(file, img); err != nil {
+		return err
+	}
+
+	return nil
 }

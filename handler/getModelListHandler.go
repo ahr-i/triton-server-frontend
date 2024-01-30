@@ -3,7 +3,7 @@ package handler
 import (
 	"net/http"
 
-	"github.com/ahr-i/triton-server-front-end/models"
+	"github.com/ahr-i/triton-server-frontend/models"
 )
 
 /* Model List 반환 */

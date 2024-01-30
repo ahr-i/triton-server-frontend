@@ -15,9 +15,9 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/ahr-i/triton-server-front-end/models"
-	"github.com/ahr-i/triton-server-front-end/setting"
-	"github.com/ahr-i/triton-server-front-end/src/errController"
+	"github.com/ahr-i/triton-server-frontend/models"
+	"github.com/ahr-i/triton-server-frontend/setting"
+	"github.com/ahr-i/triton-server-frontend/src/errController"
 	"github.com/gorilla/mux"
 )
 
@@ -154,6 +154,7 @@ func requestTritonServerResponse(request RequestData, model string, version stri
 	return tritonResponse
 }
 
+/* Convert Uint8 To Image(PNG) */
 func converUint8ToPng(imgData []float32) (*image.RGBA, bool) {
 	if len(imgData) <= 0 {
 		return nil, true

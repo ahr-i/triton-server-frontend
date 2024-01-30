@@ -3,7 +3,7 @@ package handler
 import (
 	"net/http"
 
-	"github.com/ahr-i/triton-server-front-end/urls"
+	"github.com/ahr-i/triton-server-frontend/urls"
 	"github.com/gorilla/mux"
 )
 

@@ -41,4 +41,6 @@ const seed int = -1
 ### 1.4 Run
 ```
 docker run -it --rm --name triton_frontend --network host triton-frontend
+or
+docker run -it --rm --name triton_frontend -p 80:80 triton-frontend
 ```

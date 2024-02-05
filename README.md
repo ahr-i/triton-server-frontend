@@ -23,13 +23,13 @@ Modify the contents of the file.
 package setting
 
 /* ----- Server Setting ----- */
-const ServerPort string = "443"                      // Edit This
+const ServerPort string = "80"
 
 const ModelPath string = "./models/model_list.json"
 const UrlPath string = "./urls/url_list.json"
 
 /* ----- Triton Server Setting ----- */
-const TritonUrl string = "localhost:2000"            // Edit This
+const GatewayUrl string = "localhost:2000"
 
 const batchSize int = 1
 const Samples int = 1

@@ -12,12 +12,10 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
-	"runtime"
 	"time"
 
 	"github.com/ahr-i/triton-server-frontend/models"
 	"github.com/ahr-i/triton-server-frontend/setting"
-	"github.com/ahr-i/triton-server-frontend/src/errController"
 	"github.com/gorilla/mux"
 )
 
@@ -39,12 +37,13 @@ type RequestData struct {
 
 /* Inference Handler: Gateway Server에 Inference Request 및 Image 전달 */
 func (h *Handler) inferHandler(w http.ResponseWriter, r *http.Request) {
-	_, fp, _, _ := runtime.Caller(1)
-
 	// Request Decode
 	var request RequestData
-	err_ := json.NewDecoder(r.Body).Decode(&request)
-	errController.ErrorCheck(err_, "REQUEST JSON DECODE ERROR", fp)
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 	defer r.Body.Close()
 
 	vars := mux.Vars(r)
@@ -59,25 +58,35 @@ func (h *Handler) inferHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Model, Version Check And Setting
 	modelMap := models.GetModelList()
-	version, err := modelMap[model]
-	if !err {
+	version, err_ := modelMap[model]
+	if !err_ {
 		rend.JSON(w, http.StatusNotFound, nil)
 
 		return
 	}
 
 	// Gateway Request
-	gatewayResponse := requestGatewayServerResponse(request, model, version)
+	gatewayResponse, err := requestGatewayServerResponse(request, model, version)
+	if err_ {
+		log.Println("** (ERROR)", err)
+		rend.JSON(w, http.StatusBadRequest, nil)
+		return
+	}
 
 	// Uint8 Array To Image
-	img, err := converUint8ToPng(gatewayResponse.Outputs[0].Data)
-	if err {
+	img, err_ := converUint8ToPng(gatewayResponse.Outputs[0].Data)
+	if err_ {
 		// Inference fail
 		rend.JSON(w, http.StatusBadRequest, nil)
+		return
 	}
 
 	// Encode the image in base64
-	imgBase64 := encodeImageInBase64(img)
+	imgBase64, err := encodeImageInBase64(img)
+	if err != nil {
+		log.Println("** (ERROR)", err)
+		return
+	}
 
 	// Response에 Image 추가
 	rend.JSON(w, http.StatusOK, ResponseData{Image: imgBase64})
@@ -87,9 +96,7 @@ func (h *Handler) inferHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 /* Send an inference request to the Gateway Server and return the request */
-func requestGatewayServerResponse(request RequestData, model string, version string) GatewayResponse {
-	_, fp, _, _ := runtime.Caller(1)
-
+func requestGatewayServerResponse(request RequestData, model string, version string) (GatewayResponse, error) {
 	rand.Seed(time.Now().UnixNano())
 
 	// Gateway Inference Request
@@ -135,29 +142,37 @@ func requestGatewayServerResponse(request RequestData, model string, version str
 		},
 	}
 
-	requestJSON, err_ := json.Marshal(requestData)
-	errController.ErrorCheck(err_, "JSON MARSHAL ERROR", fp)
+	requestJSON, err := json.Marshal(requestData)
+	if err != nil {
+		return GatewayResponse{}, err
+	}
 
-	req, err_ := http.NewRequest("POST", url, bytes.NewBuffer(requestJSON))
-	errController.ErrorCheck(err_, "HTTP REQUEST ERROR", fp)
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestJSON))
+	if err != nil {
+		return GatewayResponse{}, err
+	}
 	req.Header.Set("Content-Type", "application/json")
 
 	// Gateway Server Response
 	client := &http.Client{}
-	resp, err_ := client.Do(req)
-	errController.ErrorCheck(err_, "HTTP RESPONSE ERROR", fp)
+	resp, err := client.Do(req)
+	if err != nil {
+		return GatewayResponse{}, err
+	}
 	defer resp.Body.Close()
 
 	// Response Decode
-	body, err_ := ioutil.ReadAll(resp.Body)
-	errController.ErrorCheck(err_, "HTTP BODY READ ERROR", fp)
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return GatewayResponse{}, err
+	}
 
 	var gatewayResponse GatewayResponse
 	if err := json.Unmarshal(body, &gatewayResponse); err != nil {
-		log.Fatalf("RESPONSE JSON PARSE ERROR: %v", err)
+		return GatewayResponse{}, err
 	}
 
-	return gatewayResponse
+	return gatewayResponse, nil
 }
 
 /* Convert Uint8 To Image(PNG) */
@@ -184,17 +199,15 @@ func converUint8ToPng(imgData []float32) (*image.RGBA, bool) {
 }
 
 /* Encode the image in base64 */
-func encodeImageInBase64(img *image.RGBA) string {
+func encodeImageInBase64(img *image.RGBA) (string, error) {
 	var buffer bytes.Buffer
 
 	if err := png.Encode(&buffer, img); err != nil {
-		log.Println("BASE ENCODE FAIL")
-
-		os.Exit(1)
+		return "", err
 	}
 	imgBase64 := base64.StdEncoding.EncodeToString(buffer.Bytes())
 
-	return imgBase64
+	return imgBase64, nil
 }
 
 /* Save image to local */
@@ -203,7 +216,7 @@ func saveImageToLocal(img *image.RGBA) error {
 	fileName := "result-" + currentTime + ".png"
 	file, err := os.Create("./result/" + fileName)
 	if err != nil {
-		log.Fatalf("이미지 파일 생성 실패: %v", err)
+		return err
 	}
 	defer file.Close()
 

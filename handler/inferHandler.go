@@ -22,7 +22,7 @@ import (
 )
 
 /* Response Struct */
-type TritonResponse struct {
+type GatewayResponse struct {
 	Outputs []struct {
 		Data []float32 `json:"data"`
 	} `json:"outputs"`
@@ -37,7 +37,7 @@ type RequestData struct {
 	Prompt string `json:"prompt"`
 }
 
-/* Inference Handler: Triton Server에 Inference Request 및 Image 전달 */
+/* Inference Handler: Gateway Server에 Inference Request 및 Image 전달 */
 func (h *Handler) inferHandler(w http.ResponseWriter, r *http.Request) {
 	_, fp, _, _ := runtime.Caller(1)
 
@@ -53,6 +53,8 @@ func (h *Handler) inferHandler(w http.ResponseWriter, r *http.Request) {
 	// log.Println(request.Prompt)
 	if request.Prompt == "" || request.Prompt == " " {
 		rend.JSON(w, http.StatusBadRequest, nil)
+
+		return
 	}
 
 	// Model, Version Check And Setting
@@ -60,13 +62,15 @@ func (h *Handler) inferHandler(w http.ResponseWriter, r *http.Request) {
 	version, err := modelMap[model]
 	if !err {
 		rend.JSON(w, http.StatusNotFound, nil)
+
+		return
 	}
 
-	// Triton Inference Request
-	tritonResponse := requestTritonServerResponse(request, model, version)
+	// Gateway Request
+	gatewayResponse := requestGatewayServerResponse(request, model, version)
 
 	// Uint8 Array To Image
-	img, err := converUint8ToPng(tritonResponse.Outputs[0].Data)
+	img, err := converUint8ToPng(gatewayResponse.Outputs[0].Data)
 	if err {
 		// Inference fail
 		rend.JSON(w, http.StatusBadRequest, nil)
@@ -82,13 +86,15 @@ func (h *Handler) inferHandler(w http.ResponseWriter, r *http.Request) {
 	saveImageToLocal(img)
 }
 
-/* Send an inference request to the Triton Server and return the request */
-func requestTritonServerResponse(request RequestData, model string, version string) TritonResponse {
+/* Send an inference request to the Gateway Server and return the request */
+func requestGatewayServerResponse(request RequestData, model string, version string) GatewayResponse {
 	_, fp, _, _ := runtime.Caller(1)
 
-	// Triton Inference Request
+	rand.Seed(time.Now().UnixNano())
+
+	// Gateway Inference Request
 	seed := rand.Intn(10001)
-	url := "http://" + setting.TritonUrl + "/v2/models/" + model + "/versions/" + version + "/infer"
+	url := "http://" + setting.GatewayUrl + "/model/" + model + "/" + version + "/infer"
 	requestData := map[string]interface{}{
 		"inputs": []map[string]interface{}{
 			{
@@ -136,7 +142,7 @@ func requestTritonServerResponse(request RequestData, model string, version stri
 	errController.ErrorCheck(err_, "HTTP REQUEST ERROR", fp)
 	req.Header.Set("Content-Type", "application/json")
 
-	// Triton Server Response
+	// Gateway Server Response
 	client := &http.Client{}
 	resp, err_ := client.Do(req)
 	errController.ErrorCheck(err_, "HTTP RESPONSE ERROR", fp)
@@ -146,12 +152,12 @@ func requestTritonServerResponse(request RequestData, model string, version stri
 	body, err_ := ioutil.ReadAll(resp.Body)
 	errController.ErrorCheck(err_, "HTTP BODY READ ERROR", fp)
 
-	var tritonResponse TritonResponse
-	if err := json.Unmarshal(body, &tritonResponse); err != nil {
+	var gatewayResponse GatewayResponse
+	if err := json.Unmarshal(body, &gatewayResponse); err != nil {
 		log.Fatalf("RESPONSE JSON PARSE ERROR: %v", err)
 	}
 
-	return tritonResponse
+	return gatewayResponse
 }
 
 /* Convert Uint8 To Image(PNG) */

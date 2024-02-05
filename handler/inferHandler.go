@@ -67,7 +67,7 @@ func (h *Handler) inferHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Gateway Request
 	gatewayResponse, err := requestGatewayServerResponse(request, model, version)
-	if err_ {
+	if err != nil {
 		log.Println("** (ERROR)", err)
 		rend.JSON(w, http.StatusBadRequest, nil)
 		return

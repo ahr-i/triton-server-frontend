@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/ahr-i/triton-server-frontend/handler"
@@ -30,5 +31,6 @@ func main() {
 	handler.UseHandler(mux)
 
 	// HTTP Server Start
+	log.Println("* (System) Server start.")
 	http.ListenAndServe(":"+setting.ServerPort, handler)
 }

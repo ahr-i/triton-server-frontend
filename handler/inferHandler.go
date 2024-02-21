@@ -114,19 +114,19 @@ func requestGatewayServerResponse(request RequestData, model string, version str
 				"name":     "SAMPLES",
 				"datatype": "INT32",
 				"shape":    []int{1},
-				"data":     []int{1},
+				"data":     []int{setting.Samples},
 			},
 			{
 				"name":     "STEPS",
 				"datatype": "INT32",
 				"shape":    []int{1},
-				"data":     []int{45},
+				"data":     []int{setting.Steps},
 			},
 			{
 				"name":     "GUIDANCE_SCALE",
 				"datatype": "FP32",
 				"shape":    []int{1},
-				"data":     []float32{7.5},
+				"data":     []float32{float32(setting.GuidanceScale)},
 			},
 			{
 				"name":     "SEED",

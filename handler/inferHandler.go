@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"image"
 	"image/color"
 	"image/png"
@@ -101,7 +102,7 @@ func requestGatewayServerResponse(request RequestData, model string, version str
 
 	// Gateway Inference Request
 	seed := rand.Intn(10001)
-	url := "http://" + setting.GatewayUrl + "/model/" + model + "/" + version + "/infer"
+	url := fmt.Sprintf("http://%s/provider/%s/model/%s/%s/infer", setting.GatewayUrl, setting.Provider, model, version)
 	requestData := map[string]interface{}{
 		"inputs": []map[string]interface{}{
 			{

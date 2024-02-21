@@ -29,46 +29,200 @@ $(function() {
     /* Image Inference 요청 */
     $(document).ready(function() {
         submit.click(function() {
-            let prompt = textInput.val();
-            let model = dropdown1.val();
-            let data = {
-                prompt: prompt
-            };
+            //inference();
+            //inferenceTest();
+            inferenceTest1();
+        });
+    });
 
-            if (model == "Select a model...") {
-                alert("Please select a model");
+    /* ========== default ========== */
+    function inference() {
+        let prompt = textInput.val();
+        let model = dropdown1.val();
+        let data = {
+            prompt: prompt
+        };
 
-                return;
-            } else if (!prompt.trim()) {
-                alert("Please enter a prompt.");
+         if (model == "Select a model...") {
+            alert("Please select a model");
 
-                return;
+            return;
+        } else if (!prompt.trim()) {
+            alert("Please enter a prompt.");
+
+            return;
+        }
+
+        imageDisplay.empty();
+        loading.text("Loading...")
+
+        fetch("/model/" + model + "/infer", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            let base64Image = data.image;
+            let imgTag = $("<img>", { src: "data:image/png;base64," + base64Image, alt: "Generated Image" });
+            
+            imageDisplay.empty().append(imgTag);
+
+           loading.text("Finish");
+       })
+        .catch(error => {
+            console.error("ERROR" + error);
+
+            loading.text("Error")
+        });
+    }
+
+    /* ========== Test ========== */
+    function inferenceTest() {
+        let numberOfImages = parseInt(prompt("How many images do you want to generate?"));
+            if (!isNaN(numberOfImages) && numberOfImages > 0) {
+                generateImages(numberOfImages);
+            } else {
+                alert("Please enter a valid number.");
             }
+    }
 
+    function generateImages(count) {
+        if (count <= 0) {
+            loading.text("Finished generating images.");
+            return;
+        }
+    
+        let promptText = textInput.val();
+        let model = dropdown1.val();
+        let data = {
+            prompt: promptText
+        };
+    
+        if (model == "Select a model...") {
+            alert("Please select a model");
+            return;
+        } else if (!promptText.trim()) {
+            alert("Please enter a prompt.");
+            return;
+        }
+    
+        fetchImage(model, data, function() {
+            generateImages(count - 1);
+        });
+    }
+    
+    function fetchImage(model, data, callback) {
+        loading.text("Loading...");
+    
+        fetch("/model/" + model + "/infer", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            let base64Image = data.image;
+            let imgTag = $("<img>", { src: "data:image/png;base64," + base64Image, alt: "Generated Image" });
+            
+            imageDisplay.empty().append(imgTag);
+
+
+            loading.text("");
+            if (callback) {
+                callback();
+            }
+        })
+        .catch(error => {
+            console.error("ERROR" + error);
+            loading.text("Error");
+            if (callback) {
+                callback();
+            }
+        });
+    }
+
+    /* ========== Test 1 ========== */
+    function inferenceTest1() {
+        let numberOfImages = parseInt(prompt("How many images do you want to generate?"));
+        if (!isNaN(numberOfImages) && numberOfImages > 0) {
+            let startTime = performance.now();
+            loading.empty();
             imageDisplay.empty();
-            loading.text("Loading...")
+            
+            generateImages1(numberOfImages, startTime);
+        } else {
+            alert("Please enter a valid number.");
+        }
+    }
+    
+    function generateImages1(count, startTime) {
+        if (count <= 0) {
+            let endTime = performance.now();
+            let totalTime = endTime - startTime;
+            loading.text("Finished generating images. Total time: " + totalTime.toFixed(2) + " milliseconds");
+            return;
+        }
+    
+        let promptText = textInput.val();
+        let model = dropdown1.val();
+        let data = {
+            prompt: promptText
+        };
+    
+        if (model == "Select a model...") {
+            alert("Please select a model");
+            return;
+        } else if (!promptText.trim()) {
+            alert("Please enter a prompt.");
+            return;
+        }
 
-            fetch("/model/" + model + "/infer", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => response.json())
-            .then(data => {
-                let base64Image = data.image;
-                let imgTag = $("<img>", { src: "data:image/png;base64," + base64Image, alt: "Generated Image" });
-                
-                imageDisplay.empty().append(imgTag);
-
-                loading.text("Finish");
+        let promises = [];
+        for (let i = 0; i < count; i++) {
+            promises.push(fetchImage1(model, data));
+        }
+    
+        Promise.all(promises)
+            .then(() => {
+                let endTime = performance.now();
+                let totalTime = endTime - startTime;
+                loading.text("Finished generating images. Total time: " + (totalTime/1000).toFixed(2) + " seconds");
             })
             .catch(error => {
                 console.error("ERROR" + error);
-
-                loading.text("Error")
+                loading.text("Error");
             });
+    }
+    
+    function fetchImage1(model, data) {
+        return new Promise((resolve, reject) => {
+            fetch("/model/" + model + "/infer", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    let base64Image = data.image;
+                    let imgTag = $("<img>", {
+                        src: "data:image/png;base64," + base64Image,
+                        alt: "Generated Image"
+                    });
+    
+                    imageDisplay.append(imgTag);
+                    resolve();
+                })
+                .catch(error => {
+                    console.error("ERROR" + error);
+                    reject(error);
+                });
         });
-    });
+    }
 });

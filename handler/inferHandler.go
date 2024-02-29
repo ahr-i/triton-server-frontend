@@ -33,7 +33,8 @@ type ResponseData struct {
 
 /* Request Struct */
 type RequestData struct {
-	Prompt string `json:"prompt"`
+	Prompt   string `json:"prompt"`
+	Provider string `json:"provider"`
 }
 
 /* Inference Handler: Gateway Server에 Inference Request 및 Image 전달 */
@@ -46,6 +47,10 @@ func (h *Handler) inferHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
+
+	if request.Provider == "" {
+		request.Provider = setting.Provider
+	}
 
 	vars := mux.Vars(r)
 	model := vars["name"]
@@ -98,11 +103,16 @@ func (h *Handler) inferHandler(w http.ResponseWriter, r *http.Request) {
 
 /* Send an inference request to the Gateway Server and return the request */
 func requestGatewayServerResponse(request RequestData, model string, version string) (GatewayResponse, error) {
+	log.Println("* (SYSTEM) Request to gateway.")
+	log.Println("Provider:", request.Provider)
+	log.Println("Model:", model)
+	log.Println("Version:", version)
+	log.Println("Prompt:", request.Prompt)
 	rand.Seed(time.Now().UnixNano())
 
 	// Gateway Inference Request
 	seed := rand.Intn(10001)
-	url := fmt.Sprintf("http://%s/provider/%s/model/%s/%s/infer", setting.GatewayUrl, setting.Provider, model, version)
+	url := fmt.Sprintf("http://%s/provider/%s/model/%s/%s/infer", setting.GatewayUrl, request.Provider, model, version)
 	requestData := map[string]interface{}{
 		"inputs": []map[string]interface{}{
 			{

@@ -5,6 +5,7 @@ $(function() {
     let textInput = $('#text-input')
     let imageDisplay = $('#image-display')
     let loading = $('#loading')
+    let providerInput = $('#provider-input')
 
     /* Load Model List */
     $.get('/get/model-list', function(response) {
@@ -39,11 +40,13 @@ $(function() {
     function inference() {
         let prompt = textInput.val();
         let model = dropdown1.val();
+        let provider = providerInput.val()
         let data = {
-            prompt: prompt
+            prompt: prompt,
+            provider: provider
         };
 
-         if (model == "Select a model...") {
+        if (model == "Select a model...") {
             alert("Please select a model");
 
             return;
@@ -97,8 +100,10 @@ $(function() {
     
         let promptText = textInput.val();
         let model = dropdown1.val();
+        let provider = providerInput.val()
         let data = {
-            prompt: promptText
+            prompt: promptText,
+            provider: provider
         };
     
         if (model == "Select a model...") {
@@ -170,8 +175,10 @@ $(function() {
     
         let promptText = textInput.val();
         let model = dropdown1.val();
+        let provider = providerInput.val()
         let data = {
-            prompt: promptText
+            prompt: promptText,
+            provider: provider
         };
     
         if (model == "Select a model...") {

@@ -63,6 +63,21 @@ body, html {
     box-sizing: border-box;
 }
 
+#provider-input {
+    width: 20%;
+    height: 40px;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    box-sizing: border-box;
+}
+
+.input-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
 .btn-container {
     display: flex;
     align-items: center;
